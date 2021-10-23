@@ -1,0 +1,18 @@
+version: "2.4"
+
+services:
+  aitrain:
+    build: .
+    shm_size: 16g
+    runtime: nvidia
+    ports:
+      - $JUPYTER_PORT:8888
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=${GPUS:-all}
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - WANDB_API_KEY=$WANDB_API_KEY
+    volumes:
+      - $HOME/.jupyter:/root/.jupyter
+      - $HOME/.cache:/root/.cache
+      - $HOME/Desktop/contests/ai-train:/workspace/ai-train
+    command: jupyter lab --allow-root --no-browser --ip=0.0.0.0 --port=8888

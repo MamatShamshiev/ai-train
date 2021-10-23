@@ -1,0 +1,3 @@
+[submodule "src/baseline"]
+	path = src/baseline
+	url = https://github.com/sberbank-ai/railway_infrastructure_detection_aij2021.git
