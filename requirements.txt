@@ -20,3 +20,4 @@ jupyterlab-pygments==0.1.2
 jupyterlab-server==1.2.0
 flake8
 black
+wandb==0.12.5

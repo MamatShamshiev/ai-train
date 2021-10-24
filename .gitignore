@@ -144,5 +144,6 @@ data/raw
 data/processed
 logs/
 wandb/
+outputs/
 .env
 .autoenv
