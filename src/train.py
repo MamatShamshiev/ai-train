@@ -38,7 +38,7 @@ class Trainer(DefaultTrainer):
         return COCOEvaluator(dataset_name, cfg, True, output_folder)
 
     @classmethod
-    def build_train_loader(cls, cfg):
+    def build_train_mapper(cls, cfg):
         mapper = DatasetMapper(
             cfg,
             is_train=True,
@@ -54,23 +54,28 @@ class Trainer(DefaultTrainer):
                 T.RandomSaturation(0.8, 1.2),
             ],
         )
+        return mapper
+
+    @classmethod
+    def build_train_loader(cls, cfg):
+        mapper = cls.build_train_mapper(cfg)
         return build_detection_train_loader(cfg, mapper=mapper)
 
     def build_hooks(self):
         hooks = super().build_hooks()
         hooks.insert(-1, BestCheckpointerHook(self.cfg.TEST.EVAL_PERIOD))
-        train_loader = self.build_train_loader(self.cfg)
-        batch_train = next(iter(train_loader))
-        test_loader = build_detection_test_loader(
-            dataset=DatasetCatalog.get(self.cfg.DATASETS.TEST[0]),
-            mapper=DatasetMapper(self.cfg, is_train=True),
-        )
-        batch_test = next(iter(test_loader))
+
+        dataset_dicts_train = DatasetCatalog.get(self.cfg.DATASETS.TRAIN[0])
+        train_mapper = self.build_train_mapper(self.cfg)
+        batches_train = [train_mapper(d) for d in dataset_dicts_train[:1]]
+        dataset_dicts_test = DatasetCatalog.get(self.cfg.DATASETS.TEST[0])
+        test_mapper = DatasetMapper(self.cfg, is_train=True)
+        batches_test = [test_mapper(d) for d in dataset_dicts_test[:1]]
         hooks.insert(
             -1,
             PredsVisHook(
-                batch_train,
-                batch_test,
+                batches_train,
+                batches_test,
                 MetadataCatalog.get(self.cfg.DATASETS.TEST[0]),
                 self.cfg.TEST.EVAL_PERIOD,
                 self.cfg.INPUT.FORMAT,

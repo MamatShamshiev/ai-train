@@ -1,18 +1,16 @@
-import copy
 import datetime
 import logging
 import os
 import time
 
-import cv2
 import detectron2.utils.comm as comm
 import numpy as np
 import torch
 from detectron2.engine.hooks import HookBase
 from detectron2.utils.logger import log_every_n_seconds, log_first_n
-from detectron2.utils.visualizer import Visualizer
+from torch.nn import functional as F
 
-from dt2.visualize import visualize_batch_item, visualize_dataset_dict
+from dt2.visualize import visualize_batch_item
 
 
 class LossEvalHook(HookBase):
@@ -147,17 +145,22 @@ class PredsVisHook(HookBase):
             instances = predictions[0]["instances"]
             sem_seg = predictions[0]["sem_seg"]
             sem_seg = torch.argmax(sem_seg, axis=0)
-        if training_flag:
-            self.trainer.model.train()
+
+            image = batch_item["image"]
+            image = F.interpolate(
+                image[None],
+                size=(batch_item["height"], batch_item["width"]),
+                mode="nearest",
+            )[0]
         preds_item = {
-            "image": torch.from_numpy(cv2.imread(batch_item["file_name"])).permute(
-                2, 0, 1
-            ),
+            "image": image,
             "instances": instances,
             "sem_seg": sem_seg,
         }
         out = visualize_batch_item(preds_item, self._metadata, plot=False)
         self.trainer.storage.put_image(description_string, np.transpose(out, (2, 0, 1)))
+        if training_flag:
+            self.trainer.model.train()
 
 
 class NumberOfParamsHook(HookBase):
