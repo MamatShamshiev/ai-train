@@ -37,13 +37,13 @@ def visualize_dataset_dict(
         item.pop("segmentation")
 
     sem_seg_file_name = d.pop("sem_seg_file_name")
-    img = cv2.imread(d["file_name"])
+    img = cv2.imread(d["file_name"])[:, :, ::-1]
     if plot is True:
         plt.figure(figsize=figsize)
         plt.imshow(img)
         plt.show()
 
-    visualizer = Visualizer(img[:, :, ::-1], metadata=metadata, scale=scale)
+    visualizer = Visualizer(img, metadata=metadata, scale=scale)
     out = visualizer.draw_dataset_dict(d)
     mask = read_mask(sem_seg_file_name)
     mask = process_for_dt2_visualization(mask)
@@ -51,7 +51,7 @@ def visualize_dataset_dict(
     out = out.get_image()
     if plot is True:
         plt.figure(figsize=figsize)
-        plt.imshow(out[:, :, ::-1])
+        plt.imshow(out)
         plt.show()
     return out
 
@@ -59,6 +59,7 @@ def visualize_dataset_dict(
 def visualize_batch_item(
     batch_item: Dict[str, Any], metadata: Metadata, plot: bool = True, figsize=(30, 20)
 ):
+    # image must be RGB
     image = batch_item["image"].permute(1, 2, 0).numpy()
     if not batch_item["instances"].has("pred_boxes"):
         batch_item["instances"].pred_boxes = batch_item["instances"].gt_boxes
@@ -67,12 +68,12 @@ def visualize_batch_item(
     mask = batch_item["sem_seg"].clone()
     mask = process_for_dt2_visualization(mask)
 
-    visualizer = Visualizer(image[:, :, ::-1], metadata=metadata, scale=1)
+    visualizer = Visualizer(image, metadata=metadata, scale=1)
     out = visualizer.draw_instance_predictions(batch_item["instances"].to("cpu"))
     out = visualizer.draw_sem_seg(mask.to("cpu"))
     out = out.get_image()
     if plot is True:
         plt.figure(figsize=figsize)
-        plt.imshow(out[:, :, ::-1])
+        plt.imshow(out)
         plt.show()
     return out
