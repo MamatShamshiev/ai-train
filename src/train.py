@@ -1,11 +1,11 @@
 import os
 
+import albumentations as albu
 import detectron2.data.transforms as T
 import detectron2.utils.comm as comm
 import wandb
 from detectron2.config.config import get_cfg
 from detectron2.data import MetadataCatalog, build_detection_train_loader
-from detectron2.data.build import build_detection_test_loader
 from detectron2.data.catalog import DatasetCatalog
 from detectron2.data.dataset_mapper import DatasetMapper
 from detectron2.engine import default_argument_parser, launch
@@ -21,13 +21,9 @@ from defs import (
     VAL_IMAGES_PATH,
     VAL_MASKS_PATH,
 )
-from dt2.hooks import (
-    BestCheckpointerHook,
-    LossEvalHook,
-    NumberOfParamsHook,
-    PredsVisHook,
-)
+from dt2.hooks import BestCheckpointerHook, NumberOfParamsHook, PredsVisHook
 from dt2.register import register_my_dataset
+from dt2.transforms.augmentations import albu_to_dt2_aug
 
 
 class Trainer(DefaultTrainer):
@@ -39,20 +35,34 @@ class Trainer(DefaultTrainer):
 
     @classmethod
     def build_train_mapper(cls, cfg):
+        albu_tfms = [
+            (albu.CLAHE(always_apply=True), 0.2),
+            (albu.HueSaturationValue(always_apply=True), 0.2),
+            (albu.RandomGamma(always_apply=True), 0.2),
+            (albu.GaussNoise(always_apply=True), 0.2),
+            (albu.Blur(always_apply=True), 0.2),
+            (albu.MotionBlur(always_apply=True), 0.2),
+            (albu.ISONoise(always_apply=True), 0.2),
+            (albu.Sharpen(always_apply=True), 0.2),
+            (albu.ImageCompression(quality_lower=60, always_apply=True), 0.2),
+            (albu.Downscale(scale_min=0.7, scale_max=0.95, always_apply=True), 0.2),
+        ]
+        albu_augs = [albu_to_dt2_aug(tfm, prob=prob) for tfm, prob in albu_tfms]
+        dt2_aigs = [
+            T.RandomApply(T.RandomCrop("relative_range", [0.8, 0.8]), prob=0.5),
+            T.ResizeShortestEdge(
+                cfg.INPUT.MIN_SIZE_TRAIN,
+                cfg.INPUT.MAX_SIZE_TRAIN,
+                sample_style="choice",
+            ),
+            T.RandomBrightness(0.8, 1.2),
+            T.RandomContrast(0.8, 1.2),
+            T.RandomSaturation(0.8, 1.2),
+        ]
         mapper = DatasetMapper(
             cfg,
             is_train=True,
-            augmentations=[
-                T.RandomCrop("relative_range", [0.7, 0.7]),
-                T.ResizeShortestEdge(
-                    cfg.INPUT.MIN_SIZE_TRAIN,
-                    cfg.INPUT.MAX_SIZE_TRAIN,
-                    sample_style="choice",
-                ),
-                T.RandomBrightness(0.8, 1.2),
-                T.RandomContrast(0.8, 1.2),
-                T.RandomSaturation(0.8, 1.2),
-            ],
+            augmentations=dt2_aigs + albu_augs,
         )
         return mapper
 
@@ -81,10 +91,6 @@ class Trainer(DefaultTrainer):
                 self.cfg.INPUT.FORMAT,
             ),
         )
-        # if (
-        #     self.cfg.SOLVER.REFERENCE_WORLD_SIZE == 1
-        # ):  # this hook somehow works only on a single-gpu
-        #     hooks.insert(-1, LossEvalHook(self.cfg.TEST.EVAL_PERIOD, test_loader))
         hooks.insert(-1, NumberOfParamsHook())
         return hooks
 
