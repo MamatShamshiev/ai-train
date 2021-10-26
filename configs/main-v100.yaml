@@ -1,0 +1,51 @@
+_BASE_: "Base-RCNN-FPN.yaml"
+MODEL:
+  META_ARCHITECTURE: "MyPanopticFPN"
+  WEIGHTS: "https://dl.fbaipublicfiles.com/detectron2/COCO-PanopticSegmentation/panoptic_fpn_R_101_3x/139514519/model_final_cafdb1.pkl"
+  MASK_ON: False
+  BACKBONE:
+    FREEZE_AT: 0
+  RESNETS:
+    DEPTH: 101
+  SEM_SEG_HEAD:
+    LOSS_WEIGHT: 1.0
+    IGNORE_VALUE: 255
+    NUM_CLASSES: 4
+  ROI_HEADS:
+    NAME: "StandardROIHeads"
+    NUM_CLASSES: 11
+  PANOPTIC_FPN:
+    COMBINE:
+      ENABLED: False
+DATALOADER:
+  NUM_WORKERS: 12
+  FILTER_EMPTY_ANNOTATIONS: False
+INPUT:
+  FORMAT: "RGB"
+  MIN_SIZE_TRAIN: [1024, 1096, 1152, 1216, 1280, 1344, 1408, 1472, 1536]
+  MAX_SIZE_TRAIN: 3072
+  MIN_SIZE_TEST: 1536
+  MAX_SIZE_TEST: 3072
+SOLVER:
+  WARMUP_ITERS: 2500
+  IMS_PER_BATCH: 6
+  REFERENCE_WORLD_SIZE: 1
+  BASE_LR: 0.006
+  STEPS: (15000, 22500)
+  MAX_ITER: 25000
+  CHECKPOINT_PERIOD: 10000
+  AMP:
+    ENABLED: True
+TEST:
+  EVAL_PERIOD: 2500
+  DETECTIONS_PER_IMAGE: 32
+  AUG:
+    FLIP: False
+
+DATASETS:
+  TRAIN: ("train-dataset",)
+  TEST: ("val-dataset",)
+
+
+OUTPUT_DIR: '/workspace/ai-train/outputs/tmp'
+SEED: 42
