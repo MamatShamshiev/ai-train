@@ -52,8 +52,8 @@ class Trainer(DefaultTrainer):
         albu_tfms = []
         albu_augs = [albu_to_dt2_aug(tfm, prob=prob) for tfm, prob in albu_tfms]
 
-        dt2_aigs = [
-            T.RandomApply(T.RandomCrop("relative_range", [0.8, 0.8]), prob=0.5),
+        dt2_augs = [
+            T.RandomCrop("relative_range", [0.7, 0.7]),
             T.ResizeShortestEdge(
                 cfg.INPUT.MIN_SIZE_TRAIN,
                 cfg.INPUT.MAX_SIZE_TRAIN,
@@ -66,7 +66,7 @@ class Trainer(DefaultTrainer):
         mapper = DatasetMapper(
             cfg,
             is_train=True,
-            augmentations=dt2_aigs + albu_augs,
+            augmentations=dt2_augs + albu_augs,
         )
         return mapper
 
