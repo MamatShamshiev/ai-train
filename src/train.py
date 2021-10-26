@@ -35,6 +35,7 @@ class Trainer(DefaultTrainer):
 
     @classmethod
     def build_train_mapper(cls, cfg):
+        """
         albu_tfms = [
             (albu.CLAHE(always_apply=True), 0.2),
             (albu.HueSaturationValue(always_apply=True), 0.2),
@@ -47,7 +48,10 @@ class Trainer(DefaultTrainer):
             (albu.ImageCompression(quality_lower=60, always_apply=True), 0.2),
             (albu.Downscale(scale_min=0.7, scale_max=0.95, always_apply=True), 0.2),
         ]
+        """
+        albu_tfms = []
         albu_augs = [albu_to_dt2_aug(tfm, prob=prob) for tfm, prob in albu_tfms]
+
         dt2_aigs = [
             T.RandomApply(T.RandomCrop("relative_range", [0.8, 0.8]), prob=0.5),
             T.ResizeShortestEdge(
