@@ -145,5 +145,7 @@ data/processed
 logs/
 wandb/
 outputs/
+*.pth
+*.zip
 .env
 .autoenv
