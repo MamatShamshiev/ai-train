@@ -1,14 +1,14 @@
 _BASE_: "Base-RCNN-FPN.yaml"
 MODEL:
   META_ARCHITECTURE: "MyPanopticFPN"
-  WEIGHTS: "https://dl.fbaipublicfiles.com/detectron2/Misc/panoptic_fpn_R_101_dconv_cascade_gn_3x/139797668/model_final_be35db.pkl"
+  WEIGHTS: "catalog://ImageNetPretrained/FAIR/R-101-GN"
   MASK_ON: False
   BACKBONE:
     FREEZE_AT: 0
   RESNETS:
     DEPTH: 101
     NORM: "GN"
-    DEFORM_ON_PER_STAGE: [False, True, True, True]
+    # DEFORM_ON_PER_STAGE: [False, True, True, True]
     STRIDE_IN_1X1: False
   FPN:
     NORM: "GN"
@@ -39,17 +39,16 @@ INPUT:
   RANDOM_FLIP: "none"
 SOLVER:
   WARMUP_ITERS: 2500
-  IMS_PER_BATCH: 6
+  IMS_PER_BATCH: 4
   REFERENCE_WORLD_SIZE: 1
-  BASE_LR: 0.006
-  STEPS: (15000, 22500)
-  MAX_ITER: 25000
-  CHECKPOINT_PERIOD: 10000
+  BASE_LR: 0.004
+  STEPS: (22500, 34000)
+  MAX_ITER: 37500
+  CHECKPOINT_PERIOD: 20000
   AMP:
     ENABLED: True
 TEST:
   EVAL_PERIOD: 2500
-  DETECTIONS_PER_IMAGE: 32
   AUG:
     FLIP: False
 
