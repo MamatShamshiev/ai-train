@@ -1,0 +1,4 @@
+{
+    "image": "cr.msk.sbercloud.ru/aijcontest2021/toohardforme-aitrain",
+    "entrypoint": "python3 /home/jovyan/solution.py"
+}
