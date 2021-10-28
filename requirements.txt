@@ -21,3 +21,4 @@ jupyterlab-server==1.2.0
 flake8
 black
 wandb==0.12.5
+ensemble-boxes==1.0.7

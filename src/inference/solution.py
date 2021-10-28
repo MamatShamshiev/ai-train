@@ -2,8 +2,9 @@ import os
 import time
 from pathlib import Path
 
-import models  # noqa
-from submit import prepare_submit
+import dt2.models  # noqa
+
+from inference.submit import prepare_submit
 
 BASE_DIR = "/home/jovyan"
 
