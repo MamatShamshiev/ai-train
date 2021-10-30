@@ -21,6 +21,7 @@ from defs import (
     VAL_IMAGES_PATH,
     VAL_MASKS_PATH,
 )
+from dt2.config import add_retina_config
 from dt2.hooks import BestCheckpointerHook, NumberOfParamsHook, PredsVisHook
 from dt2.register import register_my_dataset
 from dt2.transforms.augmentations import albu_to_dt2_aug
@@ -104,6 +105,7 @@ def setup(args):
     Create configs and perform basic setups.
     """
     cfg = get_cfg()
+    add_retina_config(cfg)
     cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
     cfg.freeze()
