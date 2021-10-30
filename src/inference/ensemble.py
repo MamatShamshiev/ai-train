@@ -1,6 +1,7 @@
 from typing import List, Tuple
 
 import ensemble_boxes
+import scipy
 import torch
 from detectron2.structures import Boxes, Instances
 from typing_extensions import Literal
@@ -36,7 +37,11 @@ def convert_wbf_format_to_instances(
 
 class BoxEnsembler:
     def __call__(
-        self, instances_list: List[Instances], method_name: ENSEMBLE_METHOD, **kwargs
+        self,
+        instances_list: List[Instances],
+        method_name: ENSEMBLE_METHOD,
+        normalize_scores: bool = False,
+        **kwargs,
     ) -> Instances:
         boxes_list, scores_list, labels_list = [], [], []
         for instances in instances_list:
@@ -46,7 +51,12 @@ class BoxEnsembler:
             labels_list.append(labels)
 
         boxes, scores, labels = self.ensemble(
-            boxes_list, scores_list, labels_list, method_name, **kwargs
+            boxes_list,
+            scores_list,
+            labels_list,
+            method_name,
+            normalize_scores,
+            **kwargs,
         )
         instances = convert_wbf_format_to_instances(
             boxes,
@@ -63,9 +73,15 @@ class BoxEnsembler:
         scores_list: List[float],
         labels_list: List[int],
         method_name: ENSEMBLE_METHOD,
-        **kwargs
+        normalize_scores: bool = False,
+        **kwargs,
     ):
         method = self._get_method_by_name(method_name)
+        if normalize_scores is True:
+            scores_list = [
+                0.5 * (scipy.stats.rankdata(scores) / len(scores)) + 0.5
+                for scores in scores_list
+            ]
         boxes, scores, labels = method(boxes_list, scores_list, labels_list, **kwargs)
         return boxes, scores, labels
 
