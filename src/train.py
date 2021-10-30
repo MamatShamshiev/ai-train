@@ -36,21 +36,31 @@ class Trainer(DefaultTrainer):
 
     @classmethod
     def build_train_mapper(cls, cfg):
-        """
+
         albu_tfms = [
-            (albu.CLAHE(always_apply=True), 0.2),
-            (albu.HueSaturationValue(always_apply=True), 0.2),
-            (albu.RandomGamma(always_apply=True), 0.2),
-            (albu.GaussNoise(always_apply=True), 0.2),
-            (albu.Blur(always_apply=True), 0.2),
-            (albu.MotionBlur(always_apply=True), 0.2),
-            (albu.ISONoise(always_apply=True), 0.2),
-            (albu.Sharpen(always_apply=True), 0.2),
-            (albu.ImageCompression(quality_lower=60, always_apply=True), 0.2),
-            (albu.Downscale(scale_min=0.7, scale_max=0.95, always_apply=True), 0.2),
+            (albu.Blur(always_apply=True), 0.1),
+            (albu.MotionBlur(always_apply=True), 0.1),
+            (albu.ISONoise(always_apply=True), 0.1),
+            (albu.Sharpen(always_apply=True), 0.1),
+            (albu.ImageCompression(quality_lower=60, always_apply=True), 0.1),
+            (
+                albu.RandomFog(
+                    fog_coef_lower=0.1, fog_coef_upper=0.2, always_apply=True
+                ),
+                0.05,
+            ),
+            (albu.RandomRain(always_apply=True), 0.05),
+            (
+                albu.RandomSunFlare(
+                    num_flare_circles_lower=3,
+                    num_flare_circles_upper=6,
+                    always_apply=True,
+                ),
+                0.05,
+            ),
         ]
-        """
-        albu_tfms = []
+
+        # albu_tfms = []
         albu_augs = [albu_to_dt2_aug(tfm, prob=prob) for tfm, prob in albu_tfms]
 
         dt2_augs = [
