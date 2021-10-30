@@ -61,12 +61,13 @@ def visualize_batch_item(
 ):
     # image must be RGB
     image = batch_item["image"].permute(1, 2, 0).numpy()
-    if not batch_item["instances"].has("pred_boxes"):
-        batch_item["instances"].pred_boxes = batch_item["instances"].gt_boxes
-    if not batch_item["instances"].has("pred_classes"):
-        batch_item["instances"].pred_classes = batch_item["instances"].gt_classes
     visualizer = Visualizer(image, metadata=metadata, scale=1)
-    out = visualizer.draw_instance_predictions(batch_item["instances"].to("cpu"))
+    if "instances" in batch_item:
+        if not batch_item["instances"].has("pred_boxes"):
+            batch_item["instances"].pred_boxes = batch_item["instances"].gt_boxes
+        if not batch_item["instances"].has("pred_classes"):
+            batch_item["instances"].pred_classes = batch_item["instances"].gt_classes
+        out = visualizer.draw_instance_predictions(batch_item["instances"].to("cpu"))
 
     if "sem_seg" in batch_item:
         mask = batch_item["sem_seg"].clone()
