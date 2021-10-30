@@ -141,10 +141,13 @@ class PredsVisHook(HookBase):
         else:
             training_flag = False
         with torch.no_grad():
-            predictions = self.trainer.model.inference([batch_item])
-            instances = predictions[0]["instances"]
-            sem_seg = predictions[0]["sem_seg"]
-            sem_seg = torch.argmax(sem_seg, axis=0)
+            predictions = self.trainer.model([batch_item])[0]
+            instances = predictions["instances"]
+            if "sem_seg" in predictions:
+                sem_seg = predictions["sem_seg"]
+                sem_seg = torch.argmax(sem_seg, axis=0)
+            else:
+                sem_seg = None
 
             image = batch_item["image"]
             image = F.interpolate(
@@ -155,8 +158,9 @@ class PredsVisHook(HookBase):
         preds_item = {
             "image": image,
             "instances": instances,
-            "sem_seg": sem_seg,
         }
+        if sem_seg is not None:
+            preds_item["sem_seg"] = sem_seg
         out = visualize_batch_item(preds_item, self._metadata, plot=False)
         self.trainer.storage.put_image(description_string, np.transpose(out, (2, 0, 1)))
         if training_flag:

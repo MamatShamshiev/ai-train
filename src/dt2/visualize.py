@@ -65,12 +65,13 @@ def visualize_batch_item(
         batch_item["instances"].pred_boxes = batch_item["instances"].gt_boxes
     if not batch_item["instances"].has("pred_classes"):
         batch_item["instances"].pred_classes = batch_item["instances"].gt_classes
-    mask = batch_item["sem_seg"].clone()
-    mask = process_for_dt2_visualization(mask)
-
     visualizer = Visualizer(image, metadata=metadata, scale=1)
     out = visualizer.draw_instance_predictions(batch_item["instances"].to("cpu"))
-    out = visualizer.draw_sem_seg(mask.to("cpu"))
+
+    if "sem_seg" in batch_item:
+        mask = batch_item["sem_seg"].clone()
+        mask = process_for_dt2_visualization(mask)
+        out = visualizer.draw_sem_seg(mask.to("cpu"))
     out = out.get_image()
     if plot is True:
         plt.figure(figsize=figsize)
