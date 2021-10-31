@@ -12,7 +12,7 @@ from detectron2.engine import default_argument_parser, launch
 from detectron2.engine.defaults import DefaultTrainer, default_setup
 from detectron2.evaluation import COCOEvaluator
 
-import dt2.models  # noqa
+import dt2.modeling  # noqa
 from defs import (
     TRAIN_DATA_PATH,
     TRAIN_IMAGES_PATH,
@@ -37,6 +37,7 @@ class Trainer(DefaultTrainer):
     @classmethod
     def build_train_mapper(cls, cfg):
 
+        """
         albu_tfms = [
             (albu.Blur(always_apply=True), 0.1),
             (albu.MotionBlur(always_apply=True), 0.1),
@@ -59,8 +60,9 @@ class Trainer(DefaultTrainer):
                 0.05,
             ),
         ]
+        """
 
-        # albu_tfms = []
+        albu_tfms = []
         albu_augs = [albu_to_dt2_aug(tfm, prob=prob) for tfm, prob in albu_tfms]
 
         dt2_augs = [
