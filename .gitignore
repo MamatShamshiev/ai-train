@@ -144,7 +144,8 @@ data/raw
 data/processed
 logs/
 wandb/
-outputs/
+outputs*/
+submission/src
 *.pth
 *.zip
 .env

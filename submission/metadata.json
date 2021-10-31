@@ -1,0 +1,4 @@
+{
+    "image": "cr.msk.sbercloud.ru/aijcontest2021/toohardforme-aitrain:v31.10",
+    "entrypoint": "PYTHONPATH=/home/jovyan/src python3 /home/jovyan/src/inference/solution.py"
+}
