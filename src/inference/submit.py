@@ -1,17 +1,18 @@
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-import cv2
 import numpy as np
 import torch
 from detectron2.evaluation.coco_evaluation import instances_to_coco_json
 from tqdm import tqdm
 
+from inference.dataset import get_dataloader_for_inference
 from inference.ensemble import ENSEMBLE_METHOD, BoxEnsembler
-from inference.predictor import get_predictor
+from inference.predictor import get_model_dict_for_inference
 from inference.utils import prepare_detection_submit, prepare_segmentation_submit
 
 
+@torch.no_grad()
 def get_predictions_for_submit(
     path_to_images: Path,
     exp_dirs: List[Path],
@@ -42,24 +43,35 @@ def get_predictions_for_submit(
     segm_predictions = []
 
     box_ensembler = BoxEnsembler()
-    predictor_by_exp = {
-        exp_dir: get_predictor(exp_dir, score_thresh, nms_thresh)
+    model_dict_by_exp = {
+        exp_dir: get_model_dict_for_inference(exp_dir, score_thresh, nms_thresh)
         for exp_dir, score_thresh, nms_thresh in zip(
             exp_dirs, score_threshes, nms_threshes
         )
     }
+    min_sizes = list(
+        set(model_dict["min_size"] for model_dict in model_dict_by_exp.values())
+    )
+    max_sizes = list(
+        set(model_dict["max_size"] for model_dict in model_dict_by_exp.values())
+    )
+    dataloader = get_dataloader_for_inference(
+        image_paths, min_sizes, max_sizes, batch_size=1, num_workers=3
+    )
 
-    for path_to_img in tqdm(image_paths):
+    for i, batch in tqdm(enumerate(dataloader), total=len(image_paths)):
+        inputs = batch[0]
+        path_to_img = image_paths[i]
         prediction = {"image_id": int(path_to_img.name.split(".")[1])}
-        im = cv2.imread(str(path_to_img))
         sem_seg = torch.zeros(
-            (4, *im.shape[:2]), device=torch.device("cuda:0"), requires_grad=False
+            (4, inputs["height"], inputs["width"]),
+            device=torch.device("cuda:0"),
         )  # C x H x W
         instances_list = []
         for exp_dir in exp_dirs:
-            predictor = predictor_by_exp[exp_dir]
-
-            outputs = predictor(im)
+            model_dict = model_dict_by_exp[exp_dir]
+            input = inputs[(model_dict["min_size"], model_dict["max_size"])]
+            outputs = model_dict["model"]([input])[0]
             instances = outputs["instances"].to("cpu")
             instances_list.append(instances)
             if "sem_seg" in outputs:
@@ -77,7 +89,6 @@ def get_predictions_for_submit(
         detection_predictions.append(prediction)
         sem_seg = torch.argmax(sem_seg, axis=0).cpu().numpy().astype(np.uint8)
         segm_predictions.append(sem_seg)
-        assert sem_seg.shape == im.shape[:2]
     return detection_predictions, segm_predictions
 
 
