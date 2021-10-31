@@ -5,7 +5,6 @@ import torch.nn as nn
 from detectron2.config.config import configurable
 from detectron2.layers import cat
 from detectron2.modeling.box_regression import _dense_box_regression_loss
-from detectron2.modeling.meta_arch import PanopticFPN
 from detectron2.modeling.meta_arch.build import META_ARCH_REGISTRY
 from detectron2.modeling.meta_arch.retinanet import RetinaNet
 from detectron2.modeling.meta_arch.semantic_seg import build_sem_seg_head
@@ -17,28 +16,81 @@ from losses import sigmoid_soft_focal_loss_jit
 from torch.nn import functional as F
 
 
+def permute_to_N_HWA_K(tensor, K: int):
+    """
+    Transpose/reshape a tensor from (N, (Ai x K), H, W) to (N, (HxWxAi), K)
+    """
+    assert tensor.dim() == 4, tensor.shape
+    N, _, H, W = tensor.shape
+    tensor = tensor.view(N, -1, K, H, W)
+    tensor = tensor.permute(0, 3, 4, 1, 2)
+    tensor = tensor.reshape(N, -1, K)  # Size=(N,HWA,K)
+    return tensor
+
+
 @META_ARCH_REGISTRY.register()
-class MyPanopticFPN(PanopticFPN):
-    def inference(
-        self, batched_inputs: List[Dict[str, torch.Tensor]], do_postprocess: bool = True
+class RetinaNetWSemseg(RetinaNet):
+    """
+    Detectron v0.5 compatible
+    """
+
+    @configurable
+    def __init__(
+        self,
+        *,
+        sem_seg_head: nn.Module,
+        label_smoothing: float = 0.0,
+        **kwargs,
     ):
-        """
-        Run inference on the given inputs.
-        Args:
-            batched_inputs (list[dict]): same as in :meth:`forward`
-            do_postprocess (bool): whether to apply post-processing on the outputs.
-        Returns:
-            When do_postprocess=True, see docs in :meth:`forward`.
-            Otherwise, returns a (list[Instances], list[Tensor]) that contains
-            the raw detector outputs, and raw semantic segmentation outputs.
-        """
+        super().__init__(**kwargs)
+        self.sem_seg_head = sem_seg_head
+        self.label_smoothing = label_smoothing
+
+    @classmethod
+    def from_config(cls, cfg):
+        ret = super().from_config(cfg)
+        ret["sem_seg_head"] = build_sem_seg_head(cfg, ret["backbone"].output_shape())
+        ret["label_smoothing"] = cfg.MODEL.RETINANET.LABEL_SMOOTHING
+        return ret
+
+    def forward(self, batched_inputs: List[Dict[str, torch.Tensor]]):
         images = self.preprocess_image(batched_inputs)
         features = self.backbone(images.tensor)
-        sem_seg_results, _ = self.sem_seg_head(features, None)
-        proposals, _ = self.proposal_generator(images, features, None)
-        detector_results, _ = self.roi_heads(images, features, proposals, None)
+        features_list = [features[f] for f in self.head_in_features]
 
-        if do_postprocess:
+        anchors = self.anchor_generator(features_list)
+        pred_logits, pred_anchor_deltas = self.head(features_list)
+        # Transpose the Hi*Wi*A dimension to the middle:
+        pred_logits = [permute_to_N_HWA_K(x, self.num_classes) for x in pred_logits]
+        pred_anchor_deltas = [permute_to_N_HWA_K(x, 4) for x in pred_anchor_deltas]
+
+        if self.training:
+            assert not torch.jit.is_scripting(), "Not supported"
+            assert (
+                "instances" in batched_inputs[0]
+            ), "Instance annotations are missing in training!"
+            gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
+
+            gt_labels, gt_boxes = self.label_anchors(anchors, gt_instances)
+            losses = self.losses(
+                anchors, pred_logits, gt_labels, pred_anchor_deltas, gt_boxes
+            )
+
+            assert "sem_seg" in batched_inputs[0]
+            gt_sem_seg = [x["sem_seg"].to(self.device) for x in batched_inputs]
+            gt_sem_seg = ImageList.from_tensors(
+                gt_sem_seg,
+                self.backbone.size_divisibility,
+                self.sem_seg_head.ignore_value,
+            ).tensor
+            _, sem_seg_losses = self.sem_seg_head(features, gt_sem_seg)
+            losses.update(sem_seg_losses)
+            return losses
+        else:
+            detector_results = self.inference(
+                anchors, pred_logits, pred_anchor_deltas, images.image_sizes
+            )
+            sem_seg_results, _ = self.sem_seg_head(features, None)
             processed_results = []
             for sem_seg_result, detector_result, input_per_image, image_size in zip(
                 sem_seg_results, detector_results, batched_inputs, images.image_sizes
@@ -53,12 +105,14 @@ class MyPanopticFPN(PanopticFPN):
                     {"sem_seg": sem_seg_r, "instances": detector_r}
                 )
             return processed_results
-        else:
-            return detector_results, sem_seg_results
 
 
 @META_ARCH_REGISTRY.register()
-class RetinaNetWSemseg(RetinaNet):
+class RetinaNetWSemsegV06(RetinaNet):
+    """
+    Detectron v0.6 compatible
+    """
+
     @configurable
     def __init__(
         self,
