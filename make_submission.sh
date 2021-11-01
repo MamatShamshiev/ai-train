@@ -3,7 +3,7 @@
 DT2_EXP_DIRS=$1
 YOLO_EXP_DIRS=$2
 
-rm -r submission.zip submission/outputs submission/src
+rm -rf submission.zip submission/outputs submission/src
 mkdir --parents submission/outputs/
 cp -r src submission
 
