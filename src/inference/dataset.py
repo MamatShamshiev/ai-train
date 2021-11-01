@@ -24,7 +24,7 @@ class Dt2InferenceDataset(Dataset):
         path = self.image_paths[idx]
         original_image = cv2.imread(str(path))[:, :, ::-1]  # BGR TO RGB
         height, width = original_image.shape[:2]
-        inputs = {"height": height, "width": width}
+        inputs = {"orig_image": original_image, "height": height, "width": width}
         for k, aug in self.augs.items():
             image = aug.get_transform(original_image).apply_image(original_image)
             image = torch.as_tensor(image.astype("float32").transpose(2, 0, 1))

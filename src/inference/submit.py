@@ -10,6 +10,7 @@ from inference.dataset import get_dataloader_for_inference
 from inference.ensemble import ENSEMBLE_METHOD, BoxEnsembler
 from inference.predictor import get_model_dict_for_inference
 from inference.utils import prepare_detection_submit, prepare_segmentation_submit
+from inference.yolov5 import get_img_predict, get_model_dict_yolo
 
 
 @torch.no_grad()
@@ -43,18 +44,28 @@ def get_predictions_for_submit(
     segm_predictions = []
 
     box_ensembler = BoxEnsembler()
-    model_dict_by_exp = {
+
+    model_dict_by_exp_dt2 = {
         exp_dir: get_model_dict_for_inference(exp_dir, score_thresh, nms_thresh)
         for exp_dir, score_thresh, nms_thresh in zip(
             exp_dirs, score_threshes, nms_threshes
         )
+        if "yolo" not in str(exp_dir)
     }
     min_sizes = list(
-        set(model_dict["min_size"] for model_dict in model_dict_by_exp.values())
+        set(model_dict["min_size"] for model_dict in model_dict_by_exp_dt2.values())
     )
     max_sizes = list(
-        set(model_dict["max_size"] for model_dict in model_dict_by_exp.values())
+        set(model_dict["max_size"] for model_dict in model_dict_by_exp_dt2.values())
     )
+    model_dict_by_exp_yolo = {
+        exp_dir: get_model_dict_yolo(exp_dir, score_thresh, nms_thresh)
+        for exp_dir, score_thresh, nms_thresh in zip(
+            exp_dirs, score_threshes, nms_threshes
+        )
+        if "yolo" in str(exp_dir)
+    }
+
     dataloader = get_dataloader_for_inference(
         image_paths, min_sizes, max_sizes, batch_size=1, num_workers=3
     )
@@ -69,9 +80,21 @@ def get_predictions_for_submit(
         )  # C x H x W
         instances_list = []
         for exp_dir in exp_dirs:
-            model_dict = model_dict_by_exp[exp_dir]
-            input = inputs[(model_dict["min_size"], model_dict["max_size"])]
-            outputs = model_dict["model"]([input])[0]
+            if "yolo" in str(exp_dir):
+                # yolov5
+                model_dict = model_dict_by_exp_yolo[exp_dir]
+                outputs = get_img_predict(
+                    model_dict["model"],
+                    inputs["orig_image"],
+                    img_size=model_dict["img_size"],
+                    score_thresh=model_dict["score_thresh"],
+                    nms_thresh=model_dict["nms_thresh"],
+                )
+            else:
+                # detectron2
+                model_dict = model_dict_by_exp_dt2[exp_dir]
+                input = inputs[(model_dict["min_size"], model_dict["max_size"])]
+                outputs = model_dict["model"]([input])[0]
             instances = outputs["instances"].to("cpu")
             instances_list.append(instances)
             if "sem_seg" in outputs:
