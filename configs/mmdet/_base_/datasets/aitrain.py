@@ -70,7 +70,7 @@ train_pipeline = [
     ),
     dict(
         type="Resize",
-        img_scale=[(3072, 1024 + 64 * i) for i in range(1)],
+        img_scale=[(3072, 1024 + 64 * i) for i in range(9)],
         multiscale_mode="value",
         keep_ratio=True,
     ),
@@ -85,7 +85,7 @@ val_pipeline = [
     dict(type="LoadImageFromFile"),
     dict(
         type="MultiScaleFlipAug",
-        img_scale=(3072, 1536),
+        img_scale=(3072, 768),
         flip=False,
         transforms=[
             dict(type="Resize", keep_ratio=True),

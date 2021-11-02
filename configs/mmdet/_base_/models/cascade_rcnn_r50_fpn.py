@@ -1,7 +1,6 @@
 # model settings
 model = dict(
     type="CascadeRCNN",
-    pretrained=None,
     backbone=dict(
         type="ResNet",
         depth=50,
@@ -11,6 +10,7 @@ model = dict(
         norm_cfg=dict(type="BN", requires_grad=True),
         norm_eval=True,
         style="pytorch",
+        init_cfg=dict(type="Pretrained", checkpoint="torchvision://resnet50"),
     ),
     neck=dict(
         type="FPN", in_channels=[256, 512, 1024, 2048], out_channels=256, num_outs=5
@@ -39,7 +39,7 @@ model = dict(
         stage_loss_weights=[1, 0.5, 0.25],
         bbox_roi_extractor=dict(
             type="SingleRoIExtractor",
-            roi_layer=dict(type="RoIAlign", out_size=7, sample_num=0),
+            roi_layer=dict(type="RoIAlign", output_size=7, sampling_ratio=0),
             out_channels=256,
             featmap_strides=[4, 8, 16, 32],
         ),
@@ -57,10 +57,7 @@ model = dict(
                 ),
                 reg_class_agnostic=True,
                 loss_cls=dict(
-                    type="LabelSmoothCrossEntropyLoss",
-                    use_sigmoid=False,
-                    loss_weight=1.0,
-                    label_smooth=0.1,
+                    type="CrossEntropyLoss", use_sigmoid=False, loss_weight=1.0
                 ),
                 loss_bbox=dict(type="SmoothL1Loss", beta=1.0, loss_weight=1.0),
             ),
@@ -77,10 +74,7 @@ model = dict(
                 ),
                 reg_class_agnostic=True,
                 loss_cls=dict(
-                    type="LabelSmoothCrossEntropyLoss",
-                    use_sigmoid=False,
-                    loss_weight=1.0,
-                    label_smooth=0.1,
+                    type="CrossEntropyLoss", use_sigmoid=False, loss_weight=1.0
                 ),
                 loss_bbox=dict(type="SmoothL1Loss", beta=1.0, loss_weight=1.0),
             ),
@@ -97,10 +91,7 @@ model = dict(
                 ),
                 reg_class_agnostic=True,
                 loss_cls=dict(
-                    type="LabelSmoothCrossEntropyLoss",
-                    use_sigmoid=False,
-                    loss_weight=1.0,
-                    label_smooth=0.1,
+                    type="CrossEntropyLoss", use_sigmoid=False, loss_weight=1.0
                 ),
                 loss_bbox=dict(type="SmoothL1Loss", beta=1.0, loss_weight=1.0),
             ),
@@ -129,11 +120,9 @@ model = dict(
             debug=False,
         ),
         rpn_proposal=dict(
-            nms_across_levels=False,
             nms_pre=2000,
-            nms_post=2000,
-            max_num=2000,
-            nms_thr=0.7,
+            max_per_img=2000,
+            nms=dict(type="nms", iou_threshold=0.7),
             min_bbox_size=0,
         ),
         rcnn=[
@@ -198,13 +187,13 @@ model = dict(
     ),
     test_cfg=dict(
         rpn=dict(
-            nms=dict(type="nms", iou_threshold=0.7),
-            nms_across_levels=False,
             nms_pre=1000,
-            nms_post=1000,
-            max_num=1000,
+            max_per_img=1000,
+            nms=dict(type="nms", iou_threshold=0.7),
             min_bbox_size=0,
         ),
-        rcnn=dict(score_thr=0.45, nms=dict(type="nms", iou_thr=0.45), max_per_img=200),
+        rcnn=dict(
+            score_thr=0.05, nms=dict(type="nms", iou_threshold=0.5), max_per_img=100
+        ),
     ),
 )
