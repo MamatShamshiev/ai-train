@@ -147,6 +147,7 @@ logs/
 wandb/
 outputs*/
 submission/src
+work_dirs/
 *.pth
 *.zip
 .env

@@ -3,3 +3,5 @@
 data/
 outputs/
 wandb/
+work_dirs/
+submission/
