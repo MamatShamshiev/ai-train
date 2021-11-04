@@ -3,6 +3,7 @@ from typing import List
 
 import cv2
 import detectron2.data.transforms as T
+import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
 
@@ -22,9 +23,14 @@ class Dt2InferenceDataset(Dataset):
 
     def __getitem__(self, idx: int):
         path = self.image_paths[idx]
-        original_image = cv2.imread(str(path))[:, :, ::-1]  # BGR TO RGB
+        original_image = cv2.imread(str(path))
+        original_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB)
         height, width = original_image.shape[:2]
-        inputs = {"orig_image": original_image, "height": height, "width": width}
+        inputs = {
+            "image": torch.from_numpy(original_image).permute(2, 0, 1),
+            "height": height,
+            "width": width,
+        }
         for k, aug in self.augs.items():
             image = aug.get_transform(original_image).apply_image(original_image)
             image = torch.as_tensor(image.astype("float32").transpose(2, 0, 1))

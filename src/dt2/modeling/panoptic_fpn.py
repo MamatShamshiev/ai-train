@@ -43,4 +43,4 @@ class MyPanopticFPN(PanopticFPN):
                 )
             return processed_results
         else:
-            return detector_results, sem_seg_results
+            return detector_results, sem_seg_results, images.image_sizes

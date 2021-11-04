@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 import torch.nn.functional as F
 from detectron2.data import transforms as T
@@ -24,41 +23,64 @@ class AlbuImageOnlyTransform(T.Transform):
         return segmentation
 
 
-class ResizeShortestEdgeGPU:
-    def __init__(self, min_size, max_size):
-        self.min_size = min_size
-        self.max_size = max_size
-        self.device = (
-            torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-        )
+class ResizeTransformTorch(T.Transform):
+    def __init__(self, h, w, new_h, new_w):
+        super().__init__()
+        self.h = h
+        self.w = w
+        self.new_h = new_h
+        self.new_w = new_w
 
-    def _get_new_size(self, h, w):
-        scale = self.min_size * 1.0 / min(h, w)
-        if h < w:
-            newh, neww = self.min_size, scale * w
-        else:
-            newh, neww = scale * h, self.min_size
-        if max(newh, neww) > self.max_size:
-            scale = self.max_size * 1.0 / max(newh, neww)
-            newh = newh * scale
-            neww = neww * scale
-        neww = int(neww + 0.5)
-        newh = int(newh + 0.5)
-        return newh, neww
-
-    def __call__(self, img: np.ndarray):
-        h, w = img.shape[:2]
-        assert len(img.shape) == 3
-        assert img.shape[2] == 3
-        new_h, new_w = self._get_new_size(h, w)
-        if any(x < 0 for x in img.strides):
-            img = np.ascontiguousarray(img)
-        shape = list(img.shape)
-        shape_4d = shape[:2] + [1] * (4 - len(shape)) + shape[2:]
+    def apply_image(self, img: torch.Tensor, mode="bilinear"):
+        assert len(img.shape) == 3  # C x H x W
+        assert tuple(img.shape[-2:]) == (self.h, self.w)
         with torch.no_grad():
-            img = torch.from_numpy(img).to(self.device)
-            img = img.view(shape_4d).permute(2, 3, 0, 1)  # hw(c) -> nchw
-            img = F.interpolate(img, (new_h, new_w), mode="nearest", align_corners=None)
-            shape[:2] = (new_h, new_w)
-            ret = img.permute(2, 3, 0, 1).view(shape).cpu().numpy()  # nchw -> hw(c)
-        return ret
+            img = F.interpolate(img.float()[None], (self.new_h, self.new_w), mode=mode)[
+                0
+            ]
+        return img
+
+    def apply_coords(self, coords):
+        coords[:, 0] = coords[:, 0] * (self.new_w * 1.0 / self.w)
+        coords[:, 1] = coords[:, 1] * (self.new_h * 1.0 / self.h)
+        return coords
+
+    def inverse(self):
+        return ResizeTransformTorch(self.new_h, self.new_w, self.h, self.w)
+
+    def apply_segmentation(self, segmentation: torch.Tensor) -> torch.Tensor:
+        return self.apply_image(segmentation, mode="nearest")
+
+
+class HFlipTransformTorch(T.Transform):
+    def __init__(self, width: int):
+        super().__init__()
+        self.width = width
+
+    def apply_image(self, img: torch.Tensor) -> torch.Tensor:
+        assert len(img.shape) == 3  # C x H x W
+        return torch.flip(img, dims=[2])
+
+    def apply_coords(self, coords):
+        """
+        Flip the coordinates.
+
+        Args:
+            coords (ndarray): floating point array of shape Nx2. Each row is
+                (x, y).
+        Returns:
+            ndarray: the flipped coordinates.
+
+        Note:
+            The inputs are floating point coordinates, not pixel indices.
+            Therefore they are flipped by `(W - x, H - y)`, not
+            `(W - 1 - x, H - 1 - y)`.
+        """
+        coords[:, 0] = self.width - coords[:, 0]
+        return coords
+
+    def inverse(self) -> T.Transform:
+        """
+        The inverse is to flip again
+        """
+        return self
