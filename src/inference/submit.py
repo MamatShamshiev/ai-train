@@ -65,8 +65,17 @@ def get_predictions_for_submit(
         if "yolo" in str(exp_dir)
     }
 
+    if tta is False:
+        min_sizes = list(
+            set(model_dict["min_size"] for model_dict in model_dict_by_exp_dt2.values())
+        )
+        max_sizes = list(
+            set(model_dict["max_size"] for model_dict in model_dict_by_exp_dt2.values())
+        )
+    else:
+        min_sizes, max_sizes = [], []
     dataloader = get_dataloader_for_inference(
-        image_paths, [], [], batch_size=1, num_workers=3
+        image_paths, min_sizes, max_sizes, batch_size=1, num_workers=3
     )
 
     for i, batch in tqdm(enumerate(dataloader), total=len(image_paths)):
@@ -93,7 +102,11 @@ def get_predictions_for_submit(
             else:
                 # detectron2
                 model_dict = model_dict_by_exp_dt2[exp_dir]
-                outputs = model_dict["model"]([inputs])[0]
+                if tta is False:
+                    input = inputs[(model_dict["min_size"], model_dict["max_size"])]
+                else:
+                    input = inputs
+                outputs = model_dict["model"]([input])[0]
             instances = outputs["instances"].to("cpu")
             instances_list.append(instances)
             if "sem_seg" in outputs:
