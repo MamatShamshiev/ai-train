@@ -19,6 +19,7 @@ EXP_NAMES = [
 EXP_DIRS = [Path(BASE_DIR) / "outputs" / exp_name for exp_name in EXP_NAMES]
 SCORE_THRESHES = [0.0001] * len(EXP_DIRS)
 NMS_THRESHES = [0.6, 0.5, 0.5, 0.5, 0.5]
+TTA = True
 ENSEMBLE_METHOD = "wbf"
 ENSEMBLE_METHOD_KWARGS = {"iou_thr": 0.6, "weights": [1, 1, 1, 1, 1]}
 
@@ -32,6 +33,7 @@ if __name__ == "__main__":
         EXP_DIRS,
         SCORE_THRESHES,
         NMS_THRESHES,
+        TTA,
         ENSEMBLE_METHOD,
         **ENSEMBLE_METHOD_KWARGS
     )
