@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 from inference.dataset import get_dataloader_for_inference
 from inference.ensemble import ENSEMBLE_METHOD, BoxEnsembler
+from inference.postprocess import remove_small_components
 from inference.predictor import get_model_dict_for_inference
 from inference.utils import prepare_detection_submit, prepare_segmentation_submit
 from inference.yolov5 import get_img_predict, get_model_dict_yolo
@@ -19,6 +20,7 @@ def get_predictions_for_submit(
     exp_dirs: List[Path],
     score_threshes: List[float],
     nms_threshes: List[float],
+    small_components_thresh: Optional[float] = None,
     ensemble_method: ENSEMBLE_METHOD = "wbf",
     **ensemble_kwargs,
 ) -> Tuple[List[Dict], List[torch.Tensor]]:
@@ -111,6 +113,8 @@ def get_predictions_for_submit(
         )
         detection_predictions.append(prediction)
         sem_seg = torch.argmax(sem_seg, axis=0).cpu().numpy().astype(np.uint8)
+        if small_components_thresh is not None:
+            sem_seg = remove_small_components(sem_seg, thresh=small_components_thresh)
         segm_predictions.append(sem_seg)
     return detection_predictions, segm_predictions
 
