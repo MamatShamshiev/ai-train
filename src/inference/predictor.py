@@ -7,6 +7,7 @@ from detectron2.config.config import get_cfg
 from detectron2.engine.defaults import DefaultPredictor
 from detectron2.modeling.meta_arch.build import build_model
 from detectron2.modeling.test_time_augmentation import GeneralizedRCNNWithTTA
+from dt2.config import add_retina_config
 from dt2.modeling.test_time_augmentation import MyPanopticFPNWithTTA
 
 
@@ -17,6 +18,7 @@ def get_exp_cfg(
     detections_per_image: int = 200,
 ):
     cfg = get_cfg()
+    add_retina_config(cfg)
     cfg.merge_from_file(exp_dir / "config.yaml")
     cfg.MODEL.WEIGHTS = str(exp_dir / "model_best.pth")
     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = score_thresh

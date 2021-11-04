@@ -67,10 +67,10 @@ def get_predictions_for_submit(
 
     if tta is False:
         min_sizes = list(
-            set(model_dict["min_size"] for model_dict in model_dict_by_exp_dt2.values())
+            model_dict["min_size"] for model_dict in model_dict_by_exp_dt2.values()
         )
         max_sizes = list(
-            set(model_dict["max_size"] for model_dict in model_dict_by_exp_dt2.values())
+            model_dict["max_size"] for model_dict in model_dict_by_exp_dt2.values()
         )
     else:
         min_sizes, max_sizes = [], []
