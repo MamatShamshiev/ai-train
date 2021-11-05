@@ -1,9 +1,9 @@
 from typing import List, Tuple
 
 import ensemble_boxes
-import scipy
 import torch
 from detectron2.structures import Boxes, Instances
+from scipy.stats import rankdata
 from typing_extensions import Literal
 
 ENSEMBLE_METHOD = Literal["nms", "soft_nms", "nmw", "wbf"]
@@ -79,8 +79,7 @@ class BoxEnsembler:
         method = self._get_method_by_name(method_name)
         if normalize_scores is True:
             scores_list = [
-                0.5 * (scipy.stats.rankdata(scores) / len(scores)) + 0.5
-                for scores in scores_list
+                0.5 * (rankdata(scores) / len(scores)) + 0.5 for scores in scores_list
             ]
         boxes, scores, labels = method(boxes_list, scores_list, labels_list, **kwargs)
         return boxes, scores, labels
