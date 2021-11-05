@@ -15,13 +15,14 @@ EXP_NAMES = [
     "cascade-R50-2fc-FrozenBN-bs=6",
     "FPN-res101-bs=6-multiscale",
     "retina-R50-1280-1794-4096-bs=6",
+    "yolov5/yolov5l6-1536-smooth=0.1-bs=16",
 ]
 EXP_DIRS = [Path(BASE_DIR) / "outputs" / exp_name for exp_name in EXP_NAMES]
 SCORE_THRESHES = [0.0001] * len(EXP_DIRS)
-NMS_THRESHES = [0.6, 0.5, 0.5, 0.5, 0.5]
-TTA = True
+NMS_THRESHES = [0.6, 0.5, 0.5, 0.5, 0.5, 0.5]
+TTA = False
 ENSEMBLE_METHOD = "wbf"
-ENSEMBLE_METHOD_KWARGS = {"iou_thr": 0.6, "weights": [1, 1, 1, 1, 1]}
+ENSEMBLE_METHOD_KWARGS = {"iou_thr": 0.6, "weights": [1, 1, 1, 1, 1, 1]}
 
 if __name__ == "__main__":
     t1 = time.time()
