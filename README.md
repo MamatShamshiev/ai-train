@@ -1,6 +1,6 @@
 <div align="center">
 
-# :train2: 2nd Place Solution of [AI Journey Contest 2021: AITrain](https://dsworks.ru/champs/70c778a8-94e9-46de-8bad-aa2c83a757ae) :train2:
+# :train2: 2nd Place Solution of [AI Journey Contest 2021: AITrain](https://ai-journey.ru/en/contest) :train2:
 
 ![](https://user-images.githubusercontent.com/31704546/140525116-0f7710dc-8dfe-4e0d-a8eb-c21420e79c3c.png)
 
